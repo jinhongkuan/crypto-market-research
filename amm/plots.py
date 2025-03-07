@@ -33,7 +33,7 @@ def plot_market_share_token_pair(
 
     # Plotting
     fig = plot_longitudinal_features_of_entitites(venues_by_total_traffic[drop_k:top_k], volume_by_token_pair, num_token_pairs, normalize, {"xlabel": "Date", "ylabel": "Volume (USD)"})
-
+    fig.savefig(FIGURES_DIR / output_path)
 
 def plot_longitudinal_features_of_entitites(sorted_entities: list, feature_iterator, feature_cardinality: int, normalize: bool, pyplot_kwargs: dict):
     """
@@ -89,7 +89,7 @@ def plot_longitudinal_features_of_entitites(sorted_entities: list, feature_itera
     fig.tight_layout()
     fig.gca().set_xlabel(pyplot_kwargs.get("xlabel", "Date"))
     fig.gca().set_ylabel(pyplot_kwargs.get("ylabel", ""))
-    
+
     return fig
 
 if __name__ == "__main__":
