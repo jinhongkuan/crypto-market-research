@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import dotenv
 from pathlib import Path
@@ -6,39 +7,45 @@ import typer
 from loguru import logger
 from dune_client.client import DuneClient
 
-from amm.config import PROCESSED_DATA_DIR
+from amm.config import RAW_DATA_DIR
+from amm.dune.config import DEX_TRADES_QUERY_ID
+from amm.types import TokenPair
+
+from dune_client.types import QueryParameter, ParameterType
+from dune_client.client import DuneClient 
+from dune_client.query import QueryBase
 
 app = typer.Typer()
+dotenv.load_dotenv()
 
+def filter_token_pairs(raw_token_pairs: list[str]):
+    return [TokenPair(pair.split("-")[0], pair.split("-")[1]) for pair in raw_token_pairs]
+
+# dex.trades 
 @app.command()
-def fetch_dune_data(
-    query_id: int,
-    output_file: str,
-    api_key: str = None
+def fetch_daily_volume(
+    start_date: str,
+    end_date: str,
+    token_pairs: list[str],
+    output_file: Path,
 ):
-    """Fetch data from Dune Analytics and save to CSV.
-    
-    Args:
-        query_id: ID of the Dune query to execute
-        output_file: Name of output file to save results
-        api_key: Dune API key (optional - will check env var if not provided)
-    """
-    if api_key is None:
-        dotenv.load_dotenv()
-        api_key = os.getenv("DUNE_API_KEY")
-        if not api_key:
-            raise ValueError("No API key provided and DUNE_API_KEY not found in environment")
+    api_key = os.getenv("DUNE_API_KEY")
+    if not api_key:
+        raise ValueError("No API key provided and DUNE_API_KEY not found in environment")
 
-    logger.info(f"Fetching data from Dune query {query_id}...")
-    try:
-        dune = DuneClient(api_key)
-        df = dune.get_latest_result_dataframe(query_id)
-        output_path = PROCESSED_DATA_DIR / output_file
-        df.to_csv(output_path, index=False)
-        logger.success(f"Successfully saved data to {output_path}")
-    except Exception as e:
-        logger.error(f"Error fetching data from Dune: {str(e)}")
-        raise
+    query = QueryBase(
+        name="dex market volume",
+        query_id=DEX_TRADES_QUERY_ID,
+        params=[
+            QueryParameter(name="token_pairs", parameter_type=ParameterType.TEXT, value=(','.join(filter_token_pairs(token_pairs)))), 
+            QueryParameter(name="start_date", parameter_type=ParameterType.DATE, value=datetime.strptime(start_date, "%Y-%m-%d")),
+            QueryParameter(name="end_date", parameter_type=ParameterType.DATE, value=datetime.strptime(end_date, "%Y-%m-%d")),
+        ],
+    )
+    
+    dune = DuneClient(api_key)
+    df = dune.run_query_dataframe(query)
+    df.to_csv(RAW_DATA_DIR / output_file, index=False)
 
 if __name__ == "__main__":
     app()
