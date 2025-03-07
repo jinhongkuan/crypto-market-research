@@ -35,6 +35,28 @@ def plot_market_share_token_pair(
     fig = plot_longitudinal_features_of_entitites(venues_by_total_traffic[drop_k:top_k], volume_by_token_pair, num_token_pairs, normalize, {"xlabel": "Date", "ylabel": "Volume (USD)"})
     fig.savefig(FIGURES_DIR / output_path)
 
+@app.command()
+def plot_market_share_blockchain(
+        input_path: Path,
+        output_path: Path,  
+        top_k: int = typer.Option(5, help="Number of top venues to include"),
+        drop_k: int = typer.Option(0, help="Number of top venues to exclude"),
+        num_chains: int = typer.Option(100, help="Number of chains to include"),
+        normalize: bool = typer.Option(False, help="Whether to normalize volumes")
+):
+    df = pd.read_csv(input_path)
+    
+    # Data processing
+    market_share_processor = MarketShareProcessor(df)
+    feature = market_share_processor.feature_volume_by_blockchain(num_chains)
+    num_token_pairs = feature["count"]
+    volume_by_token_pair = feature["iterator"]
+    venues_by_total_traffic = market_share_processor.rank_entities()
+
+    # Plotting
+    fig = plot_longitudinal_features_of_entitites(venues_by_total_traffic[drop_k:top_k], volume_by_token_pair, num_token_pairs, normalize, {"xlabel": "Date", "ylabel": "Volume (USD)"})
+    fig.savefig(FIGURES_DIR / output_path)
+
 def plot_longitudinal_features_of_entitites(sorted_entities: list, feature_iterator, feature_cardinality: int, normalize: bool, pyplot_kwargs: dict):
     """
     Create stacked area plots with shared legend, for longitudinal data
@@ -80,8 +102,8 @@ def plot_longitudinal_features_of_entitites(sorted_entities: list, feature_itera
     
     # Sort and add legend
     (all_handles, all_labels) = zip(*sorted(zip(all_handles, all_labels), key=lambda x: sorted_entities.index(x[1])))
-    plt.legend(all_handles, all_labels, loc='center', bbox_to_anchor=(0.5, -1.0), ncol=min(len(all_labels), 4))
-
+    plt.legend(all_handles, all_labels, loc='lower center', bbox_to_anchor=(0.5, -0.5), ncol=min(len(all_labels), 4))
+    plt.subplots_adjust(bottom=-0.5)
     # Format x-axis
     dates = group.index.tolist()
     tick_indices = range(0, len(dates), len(dates)//10)

@@ -19,7 +19,7 @@ app = typer.Typer()
 dotenv.load_dotenv()
 
 def filter_token_pairs(raw_token_pairs: list[str]):
-    return [TokenPair(pair.split("-")[0], pair.split("-")[1]) for pair in raw_token_pairs]
+    return [str(TokenPair(pair.split("-")[0], pair.split("-")[1])) for pair in raw_token_pairs]
 
 # dex.trades 
 @app.command()

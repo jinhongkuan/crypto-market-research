@@ -35,6 +35,28 @@ class MarketShareProcessor:
             "count": groups.ngroups,
             "iterator": iterator
         }
+    
+    def feature_volume_by_blockchain(self, top_k: int = 100):
+        groups = self.df.groupby("blockchain")
+        selected = groups.agg({"volume_usd": "sum"}).sort_values(by="volume_usd", ascending=False).head(top_k)
+    
+        def iterator():
+            for blockchain, group in groups:
+                if blockchain not in selected.index:
+                    continue
+
+                group = group.groupby(["date", "project", "version"]).agg({"volume_usd": "sum"}).reset_index().fillna(0)
+                project_volume = group.pivot(
+                    index='date',
+                    columns=['project', 'version'],
+                    values='volume_usd'
+                )
+                yield blockchain, project_volume
+
+        return {
+            "count": len(selected),
+            "iterator": iterator
+        }
 
         
 if __name__ == "__main__":
